@@ -3,8 +3,6 @@
 #ifndef DLIB_CvIMAGE_H_
 #define DLIB_CvIMAGE_H_
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/types_c.h>
 #include "cv_image_abstract.h"
 #include "../algs.h"
 #include "../pixel.h"
@@ -23,22 +21,11 @@ namespace dlib
         typedef pixel_type type;
         typedef default_memory_manager mem_manager_type;
 
-        cv_image (const cv::Mat img) 
+        cv_image (const cv::Mat& img)
         {
             DLIB_CASSERT(img.depth() == cv::DataType<typename pixel_traits<pixel_type>::basic_pixel_type>::depth &&
                          img.channels() == pixel_traits<pixel_type>::num, 
                          "The pixel type you gave doesn't match pixel used by the open cv Mat object.");
-            IplImage temp = img;
-            init(&temp);
-        }
-
-        cv_image (const IplImage img) 
-        {
-            init(&img);
-        }
-
-        cv_image (const IplImage* img) 
-        {
             init(img);
         }
 
@@ -87,37 +74,24 @@ namespace dlib
             return *this;
         }
 
-        cv_image& operator=( const IplImage* img)
+        cv_image& operator=( const cv::Mat& img)
         {
             init(img);
             return *this;
         }
 
-        cv_image& operator=( const IplImage img)
-        {
-            init(&img);
-            return *this;
-        }
-
-        cv_image& operator=( const cv::Mat img)
-        {
-            IplImage temp = img;
-            init(&temp);
-            return *this;
-        }
-
     private:
 
-        void init (const IplImage* img) 
+        void init (const cv::Mat& img)
         {
-            DLIB_CASSERT( img->dataOrder == 0, "Only interleaved color channels are supported with cv_image"); 
-            DLIB_CASSERT((img->depth&0xFF)/8*img->nChannels == sizeof(pixel_type), 
-                         "The pixel type you gave doesn't match the size of pixel used by the open cv image struct");
+//            DLIB_CASSERT( img.dataOrder == 0, "Only interleaved color channels are supported with cv_image");
+//            DLIB_CASSERT((img.depth&0xFF)/8*img->nChannels == sizeof(pixel_type),
+//                         "The pixel type you gave doesn't match the size of pixel used by the open cv image struct");
 
-            _data = img->imageData;
-            _widthStep = img->widthStep;
-            _nr = img->height;
-            _nc = img->width;
+            _data = reinterpret_cast<char*>(img.data);
+            _widthStep = img.step1();
+            _nr = img.rows;
+            _nc = img.cols;
 
         }
 
@@ -129,9 +103,7 @@ namespace dlib
 
 // ----------------------------------------------------------------------------------------
 
-    template <
-        typename T
-        >
+    template <typename T>
     const matrix_op<op_array2d_to_mat<cv_image<T> > > mat (
         const cv_image<T>& m 
     )
